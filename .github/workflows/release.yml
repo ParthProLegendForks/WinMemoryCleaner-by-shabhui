@@ -236,16 +236,18 @@ jobs:
         id: commit_date
         shell: pwsh
         run: |
-          $date = (git show -s --format=%cd --date=short ${{ github.event.head_commit.id }}).Trim()
+          $date = (git show -s --format=%cd --date=short ${{ github.sha }}).Trim()
           "date=$date" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
       - name: Format commit message for release notes
         id: formatted_message
         shell: pwsh
-        env:
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
+          $commitMessage = (git log -1 --pretty=%B ${{ github.sha }}).Trim()
+          if ([string]::IsNullOrWhiteSpace($commitMessage)) {
+            $commitMessage = "Release ${{ needs.build.outputs.new_tag }}"
+          }
           $msg = @()
-          foreach ($line in $env:COMMIT_MESSAGE -split "`n") { $msg += "- $line" }
+          foreach ($line in $commitMessage -split "`n") { $msg += "- $line" }
           $body = $msg -join "`n"
           "body<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "$body" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
